@@ -76,7 +76,7 @@ def cross_validation(y, tX, gamma, method='logistic_regression'):
 		corr = [True if i==yTe[ind] else False for ind, i in enumerate(y_label)]
 		acc.append(sum(corr)/N_test)
 		# print("Fold: {f}, Accuracy: {acc}, Loss:{loss}".format(f=k, acc=acc[k], loss=loss))
-	return (sum(acc)/k_fold)
+	return (sum(acc)/k_fold), acc
 
 def find_optimal_gamma(y_shifted, tX_norm):
 	"""Cross validation for logistic regression"""
@@ -91,7 +91,9 @@ def find_optimal_gamma(y_shifted, tX_norm):
 	gamma_range = np.logspace(-3, -5, 10)
 	for gamma in gamma_range:
 		acc.append([])
-		acc_avg.append(cross_validation(y_shifted, tX_norm, gamma))
+		acc_avg_, acc_ = cross_validation(y_shifted, tX_norm, gamma)
+		acc_avg.append(acc_avg_)
+		acc[ind] = acc_
 		print("Gamma: {gamma}, Average Accuracy: {acc}".format(gamma=gamma, acc=acc_avg[ind]))    
 		if acc_avg[ind]>max_acc:
 			max_acc = acc_avg[ind]
