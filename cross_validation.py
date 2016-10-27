@@ -2,7 +2,7 @@
 Methods for cross validation
 """
 import numpy as np
-from scripts import logistic_regression, sigmoid, least_squares_GD, least_squares_SGD, least_squares, ridge_regression
+from implementations import logistic_regression, sigmoid, least_squares_GD, least_squares_SGD, least_squares, ridge_regression, reg_logistic_regression
 from helpers import predict_labels
 import matplotlib.pyplot as plt
 
@@ -51,22 +51,29 @@ def cross_validation(y, tX, gamma, method='logistic_regression'):
 				yTr = np.append(yTr, y[k_indices[i]], axis=0)
 				xTr = np.append(xTr, tX[k_indices[i]], axis=0)
 
-
+		initial_w = np.zeros(tX.shape[1])
 		if method == 'logistic_regression':
-			loss, w = logistic_regression(yTr, xTr, gamma, max_iters, batch_size)
+			initial_w = np.zeros((tX.shape[1],1))
+			w, loss = logistic_regression(yTr, xTr, initial_w, max_iters, gamma)
+			y_est = sigmoid(np.dot(xTe,w))
+			y_label = [0 if i<0.5 else 1 for i in y_est]
+		elif method == 'reg_logistic_regression':
+			initial_w = np.zeros((tX.shape[1],1))
+			lambda_ = 0.1
+			w, loss = reg_logistic_regression(yTr, xTr, lambda_, initial_w, max_iters, gamma)
 			y_est = sigmoid(np.dot(xTe,w))
 			y_label = [0 if i<0.5 else 1 for i in y_est]
 		elif method == 'least_squares_GD':
-			loss, w = least_squares_GD(yTr, xTr, gamma, max_iters)
+			w, loss = least_squares_GD(yTr, xTr, initial_w, max_iters, gamma)
 			y_label = predict_labels(w, xTe)
 		elif method == 'least_squares_SGD':
-			loss, w = least_squares_SGD(yTr, xTr, gamma, max_iters, batch_size)
+			w, loss = least_squares_SGD(yTr, xTr, initial_w, max_iters, gamma)
 			y_label = predict_labels(w, xTe)
 		elif method == 'least_squares':
-			loss, w = least_squares(yTr, xTr)
+			w, loss = least_squares(yTr, xTr)
 			y_label = predict_labels(w, xTe)
 		elif method == 'ridge_regression':
-			loss, w = ridge_regression(yTr, xTr, 0.1)
+			w, loss = ridge_regression(yTr, xTr, 0.1)
 			y_label = predict_labels(w, xTe)
 		else:
 			raise Exception('Invalid method')

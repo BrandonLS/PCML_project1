@@ -27,12 +27,12 @@ def compute_gradient(y, tx, w):
     e = y - tx.dot(w)
     return (-1.0/N)*(tx.T).dot(e)
 
-def least_squares_GD(y, tx, gamma, max_iters): 
+def least_squares_GD(y, tx, initial_w, max_iters, gamma): 
     """
     Linear regression using gradient descent
-    @param gamma: learning rate
+    @param gamma: step size
     @param max_iters: max number of iterations
-    @return: an approximation of the minimum of the mse loss function and the associated weights
+    @return: optimal weights, minimum mse
     """
     # Define parameters to store w and loss
     initial_w = np.zeros(tx.shape[1])
@@ -51,21 +51,21 @@ def least_squares_GD(y, tx, gamma, max_iters):
 
     min_loss = min(losses)
     w = ws[losses.index(min_loss)]
-    return min_loss, w
+    return w, min_loss
 
 #####################################################
-#           STOCHASTIC GRADIENT DESCENT                #
+#           STOCHASTIC GRADIENT DESCENT             #
 #####################################################
     
-def least_squares_SGD(y, tx, gamma, max_iters, batch_size):
+def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
     """
     Linear regression using stochastic gradient descent
-    @param gamma: learning rate
+    @param gamma: step size
     @param max_iters: maximum number of iterations
     @param batch_size: the size of batchs used for calculating the stochastic gradient
-    @return: the minimum value of mse and the w for which it is attained
+    @return: optimal weights, minimum mse
     """
-    initial_w = np.zeros(tx.shape[1])
+    batch_size = 5000
     ws = [initial_w]
     losses = []
     w = initial_w
@@ -80,7 +80,7 @@ def least_squares_SGD(y, tx, gamma, max_iters, batch_size):
             #print("SGD ({bi}/{ti}): loss={l}".format(bi=i, ti=max_iters - 1, l=loss))            
     min_loss = min(losses)
     w = ws[losses.index(min_loss)]
-    return min_loss, w
+    return w, min_loss
     
 
 #####################################################
@@ -90,11 +90,11 @@ def least_squares_SGD(y, tx, gamma, max_iters, batch_size):
 def least_squares(y, tx):
     """
     Least squares regression using normal equations
-    @return: minimum mse, and optimal weights
+    @return:  optimal weights, minimum mse
     """
     w = np.linalg.inv(tx.T.dot(tx)).dot(tx.T).dot(y)
     mse = compute_loss(y,tx,w)
-    return mse, w
+    return w, mse
 
 #####################################################
 #               RIDGE REGRESSION                    #
@@ -114,12 +114,12 @@ def ridge_regression(y, tx, lambda_):
     """
     Ridge regression using normal equations
     @param lambda_: coefficient for penalinsing term
-    @return:
+    @return: optimal weights, minimum mse
     """
     N = y.shape[0]
     w = np.linalg.inv(tx.T.dot(tx) + lambda_*2*N*np.identity(tx.shape[1])).dot(tx.T).dot(y)
     loss = compute_loss_ridge(y,tx,w,lambda_)
-    return loss, w
+    return w, loss
     
     
 #####################################################
@@ -128,12 +128,22 @@ def ridge_regression(y, tx, lambda_):
 
 def sigmoid(t):
     """apply sigmoid function on t."""
-    return np.exp(t)/(1+np.exp(t))
+    expo = np.exp(t)
+    sigm = expo/(1+expo)
+    if np.inf in expo:
+        # print("EXP OVERFLOW!!")
+        for i, x in enumerate(expo):
+            if x == np.inf:
+                sigm[i] = 1.0
+    return sigm
 
 def calculate_log(y, tx, w):
     """compute the cost by negative log likelihood."""
-    a = np.dot(tx,w)
-    return sum( np.log(1+np.exp(a)) - np.multiply(y,a) )
+    loss = sum( np.log(1+np.exp(np.dot(tx,w))) - np.multiply(y,np.dot(tx,w)) )
+    # if loss==np.inf:
+        # loss = sum( np.dot(tx,w) - np.multiply(y,np.dot(tx,w)) )
+        # print("LOSS OVERFLOW!!")
+    return loss
 
 def calculate_log_gradient(y, tx, w):
     """compute the gradient of loss."""
@@ -150,27 +160,68 @@ def log_gradient_descent(y, tx, w, gamma):
     w = w - gamma*grad
     return loss, w
 
-def logistic_regression(y, tx, gamma, max_iter, batch_size):
+def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
-    @param gamma: learning rate
-    @param max_iter: maximum nuber of iterations
-    @param batch_size: the size of batchs used for calculating the stochastic gradient
-    @return : the minimum loss and the value w for which it is attained
+    @param gamma: step size
+    @param max_iters: maximum nuber of iterations
+    @return : optimal weights, minimum mse
     """
+    batch_size = 10000
     losses = []
-    w = np.zeros((tx.shape[1],1))
+    w = initial_w
     y_batch = np.zeros((batch_size,1))
-    for iter in range(max_iter):
+    for iter in range(max_iters):
         batch = batch_iter(y, tx, batch_size, num_batches=1, shuffle=True)
         y_batch[:,0],tx_batch = next(batch)
         loss, w = log_gradient_descent(y_batch, tx_batch, w, gamma)
         losses.append(loss)
         # print("Current iteration={i}, the loss={l}".format(i=iter, l=loss))
-    return loss,w
+    return w, loss
+    # w = np.zeros((tx.shape[1],1))
+    # for iter in range(max_iters):
+        # loss, w = log_gradient_descent(y, tx, w, gamma)
+        # print("Current iteration={i}, the loss={l}".format(i=iter, l=loss))
+    # return loss,w
     
 #####################################################
-#               LOGISTIC REGRESSION                    #
+#        REGULARISED LOGISTIC REGRESSION            #
 #####################################################
 
-def reg_logistic_regression(y, tx, lambda_, gamma, max_iters):
-    raise NotImplementedError
+def calculate_reg_log(y, tx, w, lambda_):
+    """compute the cost by negative log likelihood."""
+    a = np.dot(tx,w)
+    return sum( np.log(1+np.exp(a)) - np.multiply(y,a) ) + lambda_ * np.linalg.norm(w,2)
+
+def calculate_reg_log_gradient(y, tx, w, lambda_):
+    """compute the gradient of loss."""
+    return np.dot(tx.T,(sigmoid(np.dot(tx,w))-y)) + lambda_*2*w
+
+def reg_log_gradient_descent(y, tx, w, gamma, lambda_):
+    """
+    Do one step of gradient descen using logistic regression.
+    @param gamma: learning rate
+    @return: the loss and the updated w.
+    """
+    loss = calculate_reg_log(y, tx, w, lambda_)
+    grad = calculate_reg_log_gradient(y, tx, w, lambda_)
+    w = w - gamma*grad
+    return loss, w
+
+def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
+    """
+    @param gamma: learning rate
+    @param max_iters: maximum nuber of iterations
+    @param batch_size: the size of batchs used for calculating the stochastic gradient
+    @return : optimal weights, minimum mse
+    """
+    batch_size = y.shape[0]/10
+    losses = []
+    w = np.zeros((tx.shape[1],1))
+    y_batch = np.zeros((batch_size,1))
+    for iter in range(max_iters):
+        batch = batch_iter(y, tx, batch_size, num_batches=1, shuffle=True)
+        y_batch[:,0],tx_batch = next(batch)
+        loss, w = reg_log_gradient_descent(y_batch, tx_batch, w, gamma, lambda_)
+        losses.append(loss)
+        # print("Current iteration={i}, the loss={l}".format(i=iter, l=loss))
+    return w, loss
