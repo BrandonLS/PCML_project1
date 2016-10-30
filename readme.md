@@ -6,10 +6,11 @@ Finally we have produced a report to summarise our results.
 # Code
 
 implementations.py: contains the required ml methods  
+cross_validation.py: code for cross-validating the implementations and calculating their accuracy
 run.py: run this code to generate our submission. Remember to set the data paths.
 
 # Notebooks
 
-implementations.ipnb: running the different ml methods  
-project1.ipynb: we explain our pipeline. This include data exploration, feature processing, and cross validation
+implementations.ipnb: demonstrating the different ml methods  
+project1.ipynb: we explain the pipeline we used to get our results. This includes data exploration, feature processing, and cross validation
 
