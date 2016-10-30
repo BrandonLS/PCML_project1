@@ -89,27 +89,4 @@ def create_csv_submission(ids, y_pred, name):
         writer.writeheader()
         for r1, r2 in zip(ids, y_pred):
             writer.writerow({'Id':int(r1),'Prediction':int(r2)})
-			
-			
-def pre_process_data(y, tX):
-	# Clean data
-	N, D = tX.shape
-	no_samples = N
-
-	cnt = 0
-	exclude = []
-	for n in range(no_samples):
-		for d in range(D):
-			if tX[n,d] == -999.0:
-				exclude.append(n)
-				cnt = cnt + 1
-				break
-	y_c=np.delete(y,exclude,0)
-	tX_c=np.delete(tX,exclude,0)
-
-	# Standardise data
-	tX_norm, mean, std = standardize(tX_c, None, None)
-	y_shifted = np.array([1 if i==1 else 0 for i in y_c])
-	
-	return y_shifted, tX_norm
 
